@@ -63,14 +63,15 @@ npm run build    # dist/ 에 배포 파일 생성
 6. 아이폰: 앱 → “내 아이폰” → 설정 → 로그인 → **우편함 준비하기**
 7. 학교 PC: 앱 → “학교 PC” → 설정 → 같은 계정으로 로그인 (비밀번호 저장은 “안 함”)
 
-## 배포 (나만 들어오게)
+## 배포 (GitHub Pages)
 
-1. 이 폴더를 **비공개** GitHub 저장소로 올리기
-2. Cloudflare Pages에서 저장소 연결 → Build command `npm run build`, Output `dist`
-   → 환경 변수에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-3. Cloudflare Zero Trust → Access → Applications → 배포 주소에 내 이메일만 허용하는 정책 추가
-4. 아이폰 Safari에서 열기 → 공유 → **홈 화면에 추가**
-5. 학교 PC Chrome/Edge에서 열기 → 주소창의 **앱 설치** 버튼
+`main`에 올라갈 때마다 `.github/workflows/deploy.yml`이 테스트 → 빌드 → 배포합니다.
+
+- 주소: https://kaoshunter12-code.github.io/morning-devotion/
+- 처음 한 번: 저장소 **Settings → Pages → Build and deployment → Source: GitHub Actions**
+- 우편함을 켜면: **Settings → Secrets and variables → Actions**에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`를 넣고
+  Actions 탭에서 배포를 다시 실행
+- 아이폰: Safari로 주소 열기 → 공유 → **홈 화면에 추가**
 
 ## 8시 50분 알림
 
