@@ -14,6 +14,15 @@ describe('data', () => {
     }
     expect(new Set(VERSES.map((v) => v.ref)).size).toBe(60)
   })
+  it('has clean 개역한글 text for every verse', () => {
+    for (const v of VERSES) {
+      expect(v.text.length, v.ref).toBeGreaterThan(10)
+      expect(v.text, v.ref).not.toMatch(/[\[\]]/)
+      const half = v.text.slice(0, v.text.length / 2).trim()
+      expect(v.text, v.ref).not.toBe(`${half} ${half}`)
+    }
+    expect(VERSES.find((v) => v.ref === '요한복음 15:5')?.text).toContain('나는 포도나무요')
+  })
 })
 
 describe('daily content', () => {

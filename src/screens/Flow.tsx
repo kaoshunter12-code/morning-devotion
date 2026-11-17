@@ -56,8 +56,9 @@ export function Flow({ go }: { go: (s: Screen) => void }) {
     setDraft((d) => ({ ...d, [k]: e.target.value }))
 
   async function saveVerse() {
-    if (!verseInput.trim()) return
-    await saveVerseText(content.verse.ref, verseInput.trim())
+    const t = verseInput.trim()
+    // 비우거나 개역한글과 같으면 내 본문 대신 개역한글을 씁니다(동기화되도록 빈 값으로 저장).
+    await saveVerseText(content.verse.ref, t === content.verse.text ? '' : t)
     setEditingVerse(false)
     trySync()
   }
@@ -79,7 +80,8 @@ export function Flow({ go }: { go: (s: Screen) => void }) {
     trySync()
   }
 
-  const needVerseText = verseText === null || editingVerse
+  // 직접 고쳐 적은 본문이 있으면 그것을, 없으면 개역한글 본문을 보여줍니다.
+  const shownText = verseText?.text || content.verse.text
 
   return (
     <>
@@ -97,12 +99,11 @@ export function Flow({ go }: { go: (s: Screen) => void }) {
       {step === 0 && (
         <section className="step">
           <p className="eyebrow">오늘의 말씀 · {content.theme}</p>
-          {verseText === undefined ? null : needVerseText ? (
+          {verseText === undefined ? null : editingVerse ? (
             <>
               <h1 className="serif ref">{content.verse.ref}</h1>
-              <p className="muted">{content.verse.hint}</p>
               <label className="field">
-                <span>성경을 펴서 본문을 적어 보세요. 한 번 적으면 다음에도 보여요.</span>
+                <span>다른 번역으로 바꿔 적을 수 있어요. 비워 두고 저장하면 개역한글로 돌아가요.</span>
                 <textarea
                   rows={5}
                   value={verseInput}
@@ -111,19 +112,22 @@ export function Flow({ go }: { go: (s: Screen) => void }) {
                 />
               </label>
               <div className="row">
-                <button className="secondary" onClick={saveVerse} disabled={!verseInput.trim()}>본문 저장</button>
-                {editingVerse && <button className="ghost" onClick={() => setEditingVerse(false)}>취소</button>}
+                <button className="secondary" onClick={saveVerse}>본문 저장</button>
+                <button className="ghost" onClick={() => setEditingVerse(false)}>취소</button>
               </div>
             </>
           ) : (
             <>
-              <blockquote className="verse serif">{verseText!.text}</blockquote>
-              <p className="ref-line">{content.verse.ref}</p>
+              <blockquote className="verse serif">{shownText}</blockquote>
+              <p className="ref-line">
+                {content.verse.ref}
+                {!verseText?.text && <span className="small"> · 개역한글</span>}
+              </p>
               <p className="muted small">천천히 두 번 읽어 보세요.</p>
               <button
                 className="link"
                 onClick={() => {
-                  setVerseInput(verseText!.text)
+                  setVerseInput(shownText)
                   setEditingVerse(true)
                 }}
               >
