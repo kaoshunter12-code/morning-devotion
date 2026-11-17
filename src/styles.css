@@ -145,10 +145,16 @@ textarea { resize: vertical; line-height: 1.7; }
 .detail dt { font-size: 0.8rem; color: var(--accent); margin-top: 10px; }
 .detail dd { margin: 2px 0 0; white-space: pre-wrap; }
 
-.lock { display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center; }
-.lock h1 { margin: 0 0 8px; font-size: 1.5rem; }
-.pin { max-width: 200px; text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; }
-.pin-small { max-width: 160px; }
+.welcome { display: flex; flex-direction: column; gap: 14px; }
+.welcome h1 { margin: 0 0 8px; font-size: 1.5rem; }
+.choice {
+  display: flex; flex-direction: column; gap: 4px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px;
+}
+.choice strong { font-size: 1.1rem; font-weight: 600; }
+.choice span { color: var(--muted); font-size: 0.9rem; }
+.choice:hover { border-color: var(--accent); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; background: var(--accent-soft); padding: 1px 6px; border-radius: 6px; }
 .error { color: var(--error); margin: 0; }
 .ok { color: var(--ok); margin: 0; }
 .banner { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 0.9rem; }

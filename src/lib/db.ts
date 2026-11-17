@@ -12,14 +12,12 @@ export interface Entry {
   prayer: string
   createdAt: number
   updatedAt: number
-  dirty: 0 | 1 // 아직 서버로 보내지 않은 변경이 있는지
 }
 
 export interface VerseText {
   ref: string
   text: string
   updatedAt: number
-  dirty: 0 | 1
 }
 
 export interface Meta {
@@ -35,8 +33,8 @@ class DevotionDB extends Dexie {
   constructor() {
     super('morning-devotion')
     this.version(1).stores({
-      entries: 'date, updatedAt, dirty',
-      verseTexts: 'ref, dirty',
+      entries: 'date, updatedAt',
+      verseTexts: 'ref',
       meta: 'key',
     })
   }
@@ -52,16 +50,29 @@ export async function setMeta(key: string, value: unknown): Promise<void> {
   await db.meta.put({ key, value })
 }
 
-export async function saveEntry(e: Omit<Entry, 'createdAt' | 'updatedAt' | 'dirty'>): Promise<Entry> {
-  const prev = await db.entries.get(e.date)
+export type EntryInput = Omit<Entry, 'createdAt' | 'updatedAt'>
+
+export function makeEntry(e: EntryInput, prev?: Entry): Entry {
   const now = Date.now()
-  const entry: Entry = { ...e, createdAt: prev?.createdAt ?? now, updatedAt: now, dirty: 1 }
+  return { ...e, createdAt: prev?.createdAt ?? now, updatedAt: now }
+}
+
+export async function saveEntry(e: EntryInput): Promise<Entry> {
+  const entry = makeEntry(e, await db.entries.get(e.date))
   await db.entries.put(entry)
   return entry
 }
 
+/** 더 최근에 고친 쪽을 남깁니다. 받아서 바꿨으면 true */
+export async function mergeEntry(e: Entry): Promise<boolean> {
+  const cur = await db.entries.get(e.date)
+  if (cur && cur.updatedAt >= e.updatedAt) return false
+  await db.entries.put(e)
+  return true
+}
+
 export async function saveVerseText(ref: string, text: string): Promise<void> {
-  await db.verseTexts.put({ ref, text, updatedAt: Date.now(), dirty: 1 })
+  await db.verseTexts.put({ ref, text, updatedAt: Date.now() })
 }
 
 export interface Backup {
@@ -87,16 +98,10 @@ export async function importBackup(b: Backup): Promise<number> {
   if (b?.app !== 'morning-devotion') throw new Error('이 앱의 백업 파일이 아니에요.')
   let n = 0
   await db.transaction('rw', db.entries, db.verseTexts, async () => {
-    for (const e of b.entries ?? []) {
-      const cur = await db.entries.get(e.date)
-      if (!cur || cur.updatedAt < e.updatedAt) {
-        await db.entries.put({ ...e, dirty: 1 })
-        n++
-      }
-    }
+    for (const e of b.entries ?? []) if (await mergeEntry(e)) n++
     for (const v of b.verseTexts ?? []) {
       const cur = await db.verseTexts.get(v.ref)
-      if (!cur || cur.updatedAt < v.updatedAt) await db.verseTexts.put({ ...v, dirty: 1 })
+      if (!cur || cur.updatedAt < v.updatedAt) await db.verseTexts.put(v)
     }
   })
   return n

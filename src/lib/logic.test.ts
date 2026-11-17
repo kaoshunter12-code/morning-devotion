@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveKey, open, seal } from './crypto'
-import { newerSide } from './merge'
+import { fingerprint, generateInboxKeys, importPublicKey, openWith, sealFor } from './crypto'
 import { contentFor } from './today'
 import { addDays, dayNumber } from './date'
 import { VERSES, THEMES } from '../data/verses'
@@ -48,24 +47,30 @@ describe('daily content', () => {
   })
 })
 
-describe('merge', () => {
-  it('keeps the newer side', () => {
-    expect(newerSide(undefined, 5)).toBe('remote')
-    expect(newerSide(9, 5)).toBe('local')
-    expect(newerSide(5, 5)).toBe('same')
-    expect(newerSide(5, undefined)).toBe('local')
-  })
-})
+describe('mailbox crypto', () => {
+  it('school PC can lock with the public key, only the phone can open', async () => {
+    const phone = await generateInboxKeys()
+    // 학교 PC는 공개키(JWK)만 받습니다.
+    const lock = await importPublicKey(phone.publicJwk)
+    const entry = { date: '2026-11-18', prayer: '주님 감사합니다', updatedAt: 1 }
+    const letter = await sealFor(lock, entry)
+    expect(JSON.stringify(letter)).not.toContain('감사')
+    expect(await openWith(phone.keys.privateKey, letter)).toEqual(entry)
 
-describe('crypto', () => {
-  it('round-trips and rejects a wrong passphrase', async () => {
-    const k = await deriveKey('하나님은 사랑이시라', 'user-1')
-    const sealed = await seal(k, { prayer: '주님 감사합니다' })
-    expect(sealed.data).not.toContain('감사')
-    expect(await open(k, sealed)).toEqual({ prayer: '주님 감사합니다' })
-    const sameOnOtherDevice = await deriveKey('하나님은 사랑이시라', 'user-1')
-    expect(await open(sameOnOtherDevice, sealed)).toEqual({ prayer: '주님 감사합니다' })
-    const wrong = await deriveKey('다른 문구입니다', 'user-1')
-    await expect(open(wrong, sealed)).rejects.toThrow()
-  })
+    // 다른 열쇠로는 열 수 없습니다.
+    const other = await generateInboxKeys()
+    await expect(openWith(other.keys.privateKey, letter)).rejects.toThrow()
+
+    // 개인키는 밖으로 꺼낼 수 없습니다.
+    await expect(crypto.subtle.exportKey('jwk', phone.keys.privateKey)).rejects.toThrow()
+    // 공개키(자물쇠)로는 복호화할 수 없습니다.
+    expect(lock.usages).toEqual(['encrypt'])
+  }, 30_000)
+
+  it('gives the same fingerprint for the same lock on both devices', async () => {
+    const { publicJwk } = await generateInboxKeys()
+    const copy = JSON.parse(JSON.stringify(publicJwk))
+    expect(await fingerprint(copy)).toBe(await fingerprint(publicJwk))
+    expect(await fingerprint(publicJwk)).toMatch(/^([0-9A-F]{2} ){5}[0-9A-F]{2}$/)
+  }, 30_000)
 })
